@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Keep Old Iframe Document</title>
+</head>
+<body>
+  <button id="navigate">Navigate Iframe</button>
+  <button id="showOld">Show Old Document</button>
+  <button id="sendEvent">Send Foo Event</button>
+
+  <script>
+    let frame = document.createElement("iframe");
+    frame.style.width = "400px";
+    frame.style.height = "200px";
+    document.body.appendChild(frame);
+
+    let oldDoc;
+
+    frame.addEventListener("load", () => {
+      if (!oldDoc) {
+        oldDoc = frame; // keep reference to the iframe
+        oldDoc.contentWindow.document.body.innerHTML = "<h3>First document content</h3>";
+        console.log("Saved old iframe document:", oldDoc);
+
+        // attach foo listener on the *iframe document*
+        oldDoc.contentWindow.document.addEventListener("foo", (e) => {
+          console.log("hi", e.detail);
+        });
+      }
+    });
+
+    // Start after listener is attached
+    frame.src = "about:blank";
+
+    // Navigate to a new page
+    document.getElementById("navigate").onclick = () => {
+      frame.src = "ifram1.html"; // cross-origin now
+      console.log("Iframe navigated to example.com");
+
+      frame.addEventListener("load", () => {
+        try {
+          // This only works if same-origin
+          frame.contentWindow.document.addEventListener("foo", (e) => {
+            console.log("hiiiiiiii", e.detail);
+          });
+        } catch (err) {
+          console.warn("Cannot attach listener on cross-origin iframe:", err.message);
+        }
+      }, { once: true });
+    };
+
+    // Show the old document contents (still alive in memory!)
+    document.getElementById("showOld").onclick = () => {
+      if (oldDoc) {
+        console.log("Old iframe document body.innerHTML:", oldDoc.contentWindow.document.body.innerHTML);
+        alert("Old iframe document says: " + oldDoc.contentWindow.document.body.innerHTML);
+      } else {
+        console.log("Old document not saved yet.");
+      }
+    };
+console.log("state--->", oldDoc);
+
+    // Send a foo event manually
+    document.getElementById("sendEvent").onclick = () => {
+      if (oldDoc) {
+        console.log("event sending to old---", oldDoc);
+        
+        oldDoc.contentWindow.document.dispatchEvent(
+          new CustomEvent("foo", { detail: { message: "hello from button" } })
+        );
+      }
+    };
+  </script>
+</body>
+</html>
